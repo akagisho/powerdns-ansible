@@ -1,0 +1,112 @@
+---
+#- name: modify mysqld.cnf
+#  lineinfile:
+#    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+#    regexp: '^bind-address.*$'
+#    line: "bind-address            = 0.0.0.0"
+#  notify: restart mysql
+
+- name: add user to docker group
+  user:
+    name: "{{ opsuser }}"
+    groups: docker
+
+- name: generate mysql password
+  shell:
+    test -f /home/{{ opsuser }}/.my.cnf && (grep ^password /home/{{ opsuser }}/.my.cnf | head -1 | cut -d'"' -f2)
+    || (cat /dev/urandom | tr -dc '[:alnum:]!+-.=@_' | head -c 32)
+  changed_when: False
+  register: last_result
+
+- name: set var
+  set_fact:
+    mysql_password: "{{ last_result.stdout }}"
+
+- name: create mysql databases
+  mysql_db:
+    name: "{{ item }}"
+  with_items:
+    - pdns
+    - powerdns_admin
+
+- name: create mysql user
+  mysql_user:
+    name: "{{ opsuser }}"
+    host: localhost
+    password: "{{ mysql_password }}"
+    priv: "*.*:ALL"
+
+- name: put .my.cnf
+  template:
+    src: home/dnsops/.my.cnf.j2
+    dest: /home/{{ opsuser }}/.my.cnf
+    mode: "0600"
+    owner: "{{ opsuser }}"
+
+- name: clone PowerDNS-Admin
+  git:
+    repo: https://github.com/ngoduykhanh/PowerDNS-Admin
+    dest: /home/{{ opsuser }}/PowerDNS-Admin
+    update: no
+
+- name: put .env
+  template:
+    src: home/dnsops/PowerDNS-Admin/.env.j2
+    dest: /home/dnsops/PowerDNS-Admin/.env
+    owner: "{{ opsuser }}"
+
+- name: put docker-compose.yml
+  template:
+    src: home/dnsops/PowerDNS-Admin/docker-compose.yml.j2
+    dest: /home/dnsops/PowerDNS-Admin/docker-compose.yml
+    owner: "{{ opsuser }}"
+
+- name: put entrypoint.sh
+  template:
+    src: home/dnsops/PowerDNS-Admin/docker/PowerDNS-Admin/entrypoint.sh.j2
+    dest: /home/dnsops/PowerDNS-Admin/docker/PowerDNS-Admin/entrypoint.sh
+
+- name: put config files
+  template:
+    src: "{{ item }}"
+    dest: /home/{{ opsuser }}/PowerDNS-Admin/configs/{{ item | basename | regex_replace('\.j2$','') }}
+  with_fileglob:
+    - ../templates/home/dnsops/PowerDNS-Admin/configs/*.j2
+
+- name: run docker-compose build
+  shell: docker-compose build
+  args:
+    chdir: /home/{{ opsuser }}/PowerDNS-Admin
+  become_user: "{{ opsuser }}"
+  register: result
+  changed_when: "'Running in' in result.stdout"
+
+- name: put systemd config files
+  template:
+    src: "{{ item }}"
+    dest: /etc/systemd/system/{{ item | basename | regex_replace('\.j2$','') }}
+  with_fileglob:
+    - ../templates/etc/systemd/system/*.j2
+
+- name: start services automatically
+  systemd:
+    name: "{{ item }}"
+    state: started
+    daemon_reload: yes
+    enabled: yes
+  with_items:
+    - pdns-server.service
+    - powerdns-admin.service
+
+- name: put master_zones.sh
+  template:
+    src: home/dnsops/zone_sync/master_zones.sh.j2
+    dest: /home/{{ opsuser }}/zone_sync/master_zones.sh
+    owner: "{{ opsuser }}"
+    mode: "0755"
+
+- name: set master_zones.sh cron
+  cron:
+    name: master_zones.sh
+    user: "{{ opsuser }}"
+    job: "setlock -n /tmp/master_zones.lock /home/{{ opsuser }}/zone_sync/master_zones.sh"

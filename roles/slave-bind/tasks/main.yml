@@ -1,0 +1,20 @@
+---
+- name: install packages
+  apt:
+    name:
+      - bind9
+    update_cache: yes
+
+- name: copy bind9 config file
+  copy:
+    src: "{{ item }}"
+    dest: /etc/bind/
+  with_fileglob:
+    - etc/bind/*
+  notify: reload bind9
+
+- name: make zones directory
+  file:
+    path: /var/cache/bind/slave
+    state: directory
+    owner: bind

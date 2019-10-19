@@ -1,0 +1,8 @@
+[master]
+pdns.example.com
+
+[slave-bind]
+ns1.example.com
+
+[slave-nsd]
+ns2.example.com

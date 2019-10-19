@@ -1,0 +1,46 @@
+#!/bin/sh
+
+set -e
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+MASTER_HOST={{ master }}
+MASTER_USER={{ opsuser }}
+
+if [ -f /usr/sbin/named ]; then
+  TYPE=bind
+elif [ -f /usr/sbin/nsd ]; then
+  TYPE=nsd
+else
+  echo "Unknown daemon" 1>&2
+  exit 1
+fi
+
+DIR=$(cd $(dirname $0); pwd)
+
+scp -p -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \
+  -i /home/$MASTER_USER/.ssh/id_rsa \
+  $MASTER_USER@$MASTER_HOST:zone_sync/master_zones.txt $DIR
+
+TEMP=$(mktemp $DIR/.slave_zones.txt.XXXXX)
+if [ "$TYPE" = "bind" ]; then
+  grep -v '^#' /var/cache/bind/_default.nzf | awk '{print $2}' | tr -d '"' | sort > $TEMP \
+    && mv $TEMP $DIR/slave_zones.txt
+
+  for i in $(diff $DIR/master_zones.txt $DIR/slave_zones.txt | grep '^<' | awk '{print $2}'); do
+    rndc addzone $i "{type slave; file \"slave/$i.db\"; masters {$MASTER_HOST;};};" || :
+  done
+  for i in $(diff $DIR/master_zones.txt $DIR/slave_zones.txt | grep '^>' | awk '{print $2}'); do
+    rndc delzone $i || :
+  done
+elif [ "$TYPE" = "nsd" ]; then
+  nsd-control zonestatus | grep '^zone:' | awk '{print $2}' | sort > $TEMP \
+    && mv $TEMP $DIR/slave_zones.txt
+
+  for i in $(diff $DIR/master_zones.txt $DIR/slave_zones.txt | grep '^<' | awk '{print $2}'); do
+    nsd-control addzone $i slavezone > /dev/null || :
+  done
+  for i in $(diff $DIR/master_zones.txt $DIR/slave_zones.txt | grep '^>' | awk '{print $2}'); do
+    nsd-control delzone $i > /dev/null || :
+  done
+fi

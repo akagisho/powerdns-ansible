@@ -1,0 +1,19 @@
+---
+- name: install depences
+  apt:
+    name:
+      - nsd
+    update_cache: yes
+
+- name: put nsd.conf
+  template:
+    src: etc/nsd/nsd.conf.j2
+    dest: /etc/nsd/nsd.conf
+  notify: restart nsd
+
+- name: create zones directory
+  file:
+    path: /var/lib/nsd/slaves
+    state: directory
+    owner: nsd
+    group: nsd

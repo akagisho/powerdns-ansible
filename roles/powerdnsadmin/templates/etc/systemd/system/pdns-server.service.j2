@@ -1,0 +1,11 @@
+[Unit]
+Description=PowerDNS
+After=network.target
+
+[Service]
+User={{ opsuser }}
+WorkingDirectory=/home/dnsops/PowerDNS-Admin
+ExecStart=/usr/local/bin/docker-compose up pdns-server
+
+[Install]
+WantedBy=multi-user.target

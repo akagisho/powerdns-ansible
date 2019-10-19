@@ -1,0 +1,47 @@
+---
+- name: install packages
+  apt:
+    name:
+      - mysql-server
+      - libmysqlclient-dev
+    update_cache: yes
+
+- name: install pip modules
+  pip:
+    name:
+      - mysql-python
+      - pexpect
+
+- name: generate mysql password
+  shell:
+    test -f /root/.my.cnf && (grep ^password /root/.my.cnf | head -1 | cut -d'"' -f2)
+    || (cat /dev/urandom | tr -dc '[:alnum:]!#%&()*+,-./;<=>?@[]^_{|}~' | head -c 32)
+  changed_when: False
+  register: last_result
+
+- name: set var
+  set_fact:
+    mysql_password: "{{ last_result.stdout }}"
+
+- name: set mysql password
+  mysql_user:
+    name: root
+    host: localhost
+    password: "{{ mysql_password }}"
+
+- name: put .my.cnf
+  template:
+    src: root/.my.cnf.j2
+    dest: /root/.my.cnf
+    mode: '0600'
+
+#- name: exec mysql_secure_installation
+#  expect:
+#    command: mysql_secure_installation
+#    responses:
+#      "Press y|Y for Yes, any other key for No: " : "n"
+#      "Change the password for root \\?.*: " : "n"
+#      "Remove anonymous users\\?.*: " : "y"
+#      "Disallow root login remotely\\?.*: " : "y"
+#      "Remove test database and access to it\\?.*: " : "y"
+#      "Reload privilege tables now\\?.*: " : "y"

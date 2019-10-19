@@ -1,0 +1,67 @@
+version: "2.1"
+
+services:
+  powerdns-admin:
+    build:
+      context: .
+      dockerfile: docker/PowerDNS-Admin/Dockerfile
+      args:
+        - ENVIRONMENT=${ENVIRONMENT}
+    image: powerdns-admin
+    container_name: powerdns-admin
+    mem_limit: 256M
+    memswap_limit: 256M
+    ports:
+      - "9191:9191"
+    volumes:
+      # Code
+      - .:/powerdns-admin/
+      - "./configs/${ENVIRONMENT}.py:/powerdns-admin/config.py"
+      # Assets dir volume
+      - powerdns-admin-assets:/powerdns-admin/app/static
+      - powerdns-admin-assets2:/powerdns-admin/node_modules
+      - powerdns-admin-assets3:/powerdns-admin/logs
+      - ./app/static/custom:/powerdns-admin/app/static/custom
+      - /var/run/mysqld/mysqld.sock:/var/run/mysqld/mysqld.sock
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+    networks:
+      - default
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+      - PDA_DB_HOST=${PDA_DB_HOST}
+      - PDA_DB_NAME=${PDA_DB_NAME}
+      - PDA_DB_USER=${PDA_DB_USER}
+      - PDA_DB_PASSWORD=${PDA_DB_PASSWORD}
+      - PDA_DB_PORT=${PDA_DB_PORT}
+      - PDNS_HOST=${PDNS_HOST}
+      - PDNS_API_KEY=${PDNS_API_KEY}
+      - FLASK_APP=/powerdns-admin/app/__init__.py
+
+  pdns-server:
+    image: psitrax/powerdns
+    hostname: ${PDNS_HOST}
+    ports:
+      - "53:53"
+      - "53:53/udp"
+    volumes:
+      - /var/run/mysqld/mysqld.sock:/var/run/mysqld/mysqld.sock
+    networks:
+      - default
+    command: --api=yes --api-key=${PDNS_API_KEY} --webserver-address=0.0.0.0 --webserver-allow-from=0.0.0.0/0 --allow-axfr-ips={{ slaves | join(',') }}
+    environment:
+      - MYSQL_HOST=${PDNS_DB_HOST}
+      - MYSQL_USER=${PDNS_DB_USER}
+      - MYSQL_PASS=${PDNS_DB_PASSWORD}
+      - PDNS_API_KEY=${PDNS_API_KEY}
+      - PDNS_WEBSERVER_ALLOW_FROM=${PDNS_WEBSERVER_ALLOW_FROM}
+
+networks:
+  default:
+
+volumes:
+  powerdns-admin-assets:
+  powerdns-admin-assets2:
+  powerdns-admin-assets3:

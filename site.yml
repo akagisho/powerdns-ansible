@@ -1,0 +1,22 @@
+---
+- hosts: master
+  become: yes
+  roles:
+    - common
+    - docker
+    - mysql
+    - powerdnsadmin
+
+- hosts: slave-bind
+  become: yes
+  roles:
+    - common
+    - slave
+    - slave-bind
+
+- hosts: slave-nsd
+  become: yes
+  roles:
+    - common
+    - slave
+    - slave-nsd

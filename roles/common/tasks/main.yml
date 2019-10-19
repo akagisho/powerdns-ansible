@@ -1,0 +1,99 @@
+---
+- name: check os version
+  fail: msg='OS is NOT Ubuntu18.x'
+  when: ansible_distribution != 'Ubuntu' or ansible_distribution_major_version != '18'
+
+- name: install packages
+  apt:
+    name:
+      - python-pip
+      - python-dev
+      - python-setuptools
+      - python3-pip
+      - python3-dev
+      - python3-setuptools
+    update_cache: yes
+
+- name: disable local DNS stub listener
+  lineinfile:
+    path: /etc/systemd/resolved.conf
+    regexp: '^#?DNSStubListener='
+    line: "DNSStubListener=no"
+  register: last_result
+
+- name: restart systemd-resolved
+  systemd:
+    name: systemd-resolved
+    state: restarted
+  when: last_result.changed
+
+- name: create symbolic link
+  file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    state: link
+
+- name: install packages
+  apt:
+    name:
+      - daemontools
+    update_cache: yes
+
+- name: add user
+  user:
+    name: "{{ opsuser }}"
+    #groups=sudo
+
+- name: make .ssh directory
+  file:
+    path: /home/{{ opsuser }}/.ssh
+    state: directory
+    owner: "{{ opsuser }}"
+    mode: "0700"
+
+- name: generate ssh key pair
+  shell: ssh-keygen -t rsa -N "" -f /home/{{ opsuser }}/.ssh/id_rsa
+  args:
+    creates: /home/{{ opsuser }}/.ssh/id_rsa
+  become: yes
+  become_user: "{{ opsuser }}"
+  when: "'master' in group_names"
+
+- name: fetch ssh key pair
+  fetch:
+    src: "{{ item }}"
+    dest: tmp/
+    flat: yes
+  with_items:
+    - /home/{{ opsuser }}/.ssh/id_rsa
+    - /home/{{ opsuser }}/.ssh/id_rsa.pub
+  when: "'master' in group_names"
+
+- name: put ssh key
+  copy:
+    src: tmp/id_rsa
+    dest: /home/{{ opsuser }}/.ssh/id_rsa
+    owner: "{{ opsuser }}"
+    mode: 0600
+
+- name: put ssh public key
+  copy:
+    src: tmp/id_rsa.pub
+    dest: /home/{{ opsuser }}/.ssh/id_rsa.pub
+    owner: "{{ opsuser }}"
+
+- name: get ssh public key
+  shell: cat /home/{{ opsuser }}/.ssh/id_rsa.pub
+  register: authorized_key
+  changed_when: False
+
+- name: set authorized_key
+  authorized_key:
+    user: "{{ opsuser }}"
+    key: "{{ authorized_key.stdout }}"
+
+- name: create zone_sync directory
+  file:
+    path: /home/{{ opsuser }}/zone_sync
+    state: directory
+    owner: "{{ opsuser }}"
