@@ -9,7 +9,7 @@
 - name: install pip modules
   pip:
     name:
-      - mysql-python
+      - mysqlclient
       - pexpect
 
 - name: generate mysql password
