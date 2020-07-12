@@ -61,11 +61,6 @@
     dest: /home/dnsops/PowerDNS-Admin/docker-compose.yml
     owner: "{{ opsuser }}"
 
-- name: put entrypoint.sh
-  template:
-    src: home/dnsops/PowerDNS-Admin/docker/PowerDNS-Admin/entrypoint.sh.j2
-    dest: /home/dnsops/PowerDNS-Admin/docker/PowerDNS-Admin/entrypoint.sh
-
 - name: put config files
   template:
     src: "{{ item }}"
@@ -80,6 +75,18 @@
   become_user: "{{ opsuser }}"
   register: result
   changed_when: "'Running in' in result.stdout"
+
+- name: put set_api_key.sh
+  template:
+    src: home/dnsops/set_api_key.sh.j2
+    dest: /home/dnsops/set_api_key.sh
+    owner: "{{ opsuser }}"
+    mode: "0700"
+
+- name: set PDNS_API_KEY
+  shell: /home/dnsops/set_api_key.sh
+  register: result
+  changed_when: "'CHANGED' in result.stdout"
 
 - name: put systemd config files
   template:

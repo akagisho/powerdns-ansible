@@ -1,44 +1,22 @@
-version: "2.1"
+version: "3"
 
 services:
   powerdns-admin:
-    build:
-      context: .
-      dockerfile: docker/PowerDNS-Admin/Dockerfile
-      args:
-        - ENVIRONMENT=${ENVIRONMENT}
-    image: powerdns-admin
-    container_name: powerdns-admin
-    mem_limit: 256M
-    memswap_limit: 256M
+    image: ngoduykhanh/powerdns-admin:latest
+    container_name: powerdns_admin
     ports:
-      - "9191:9191"
+      - "9191:80"
     volumes:
-      # Code
-      - .:/powerdns-admin/
-      - "./configs/${ENVIRONMENT}.py:/powerdns-admin/config.py"
-      # Assets dir volume
-      - powerdns-admin-assets:/powerdns-admin/app/static
-      - powerdns-admin-assets2:/powerdns-admin/node_modules
-      - powerdns-admin-assets3:/powerdns-admin/logs
-      - ./app/static/custom:/powerdns-admin/app/static/custom
       - /var/run/mysqld/mysqld.sock:/var/run/mysqld/mysqld.sock
-    logging:
-      driver: json-file
-      options:
-        max-size: 50m
     networks:
       - default
     environment:
-      - ENVIRONMENT=${ENVIRONMENT}
-      - PDA_DB_HOST=${PDA_DB_HOST}
-      - PDA_DB_NAME=${PDA_DB_NAME}
-      - PDA_DB_USER=${PDA_DB_USER}
-      - PDA_DB_PASSWORD=${PDA_DB_PASSWORD}
-      - PDA_DB_PORT=${PDA_DB_PORT}
-      - PDNS_HOST=${PDNS_HOST}
+      - SQLALCHEMY_DATABASE_URI=mysql://${PDA_DB_USER}:${PDA_DB_PASSWORD}@${PDA_DB_HOST}/${PDA_DB_NAME}
       - PDNS_API_KEY=${PDNS_API_KEY}
-      - FLASK_APP=/powerdns-admin/app/__init__.py
+      - GUNICORN_TIMEOUT=60
+      - GUNICORN_WORKERS=2
+      - GUNICORN_LOGLEVEL=DEBUG
+      - OFFLINE_MODE=False # True for offline, False for external resources
 
   pdns-server:
     image: psitrax/powerdns
@@ -60,8 +38,3 @@ services:
 
 networks:
   default:
-
-volumes:
-  powerdns-admin-assets:
-  powerdns-admin-assets2:
-  powerdns-admin-assets3:

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -e
+
+PDNS_API_URL="http://pdns-server:8081"
+PDNS_API_KEY="{{ mysql_password | hash('md5') }}"
+
+if [ $(mysql -sN powerdns_admin -e "select COUNT(*) from setting where name='pdns_api_url';") -ne 1 ]; then
+  mysql powerdns_admin -e "INSERT INTO setting(name,value) VALUES('pdns_api_url','${PDNS_API_URL}');"
+  echo CHANGED
+fi
+
+if [ $(mysql -sN powerdns_admin -e "select COUNT(*) from setting where name='pdns_api_key';") -ne 1 ]; then
+  mysql powerdns_admin -e "INSERT INTO setting(name,value) VALUES('pdns_api_key','${PDNS_API_KEY}');"
+  echo CHANGED
+fi
