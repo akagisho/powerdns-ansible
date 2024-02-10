@@ -17,6 +17,7 @@ services:
       - GUNICORN_WORKERS=2
       - GUNICORN_LOGLEVEL=DEBUG
       - OFFLINE_MODE=False # True for offline, False for external resources
+    restart: always
 
   pdns-server:
     image: psitrax/powerdns
@@ -35,6 +36,7 @@ services:
       - MYSQL_PASS=${PDNS_DB_PASSWORD}
       - PDNS_API_KEY=${PDNS_API_KEY}
       - PDNS_WEBSERVER_ALLOW_FROM=${PDNS_WEBSERVER_ALLOW_FROM}
+    restart: always
 
 networks:
   default:
