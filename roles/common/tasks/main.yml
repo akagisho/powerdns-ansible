@@ -3,6 +3,10 @@
   fail: msg='OS is NOT Ubuntu18.x'
   when: ansible_distribution != 'Ubuntu' or ansible_distribution_major_version != '18'
 
+- name: set timezone
+  timezone:
+    name: "{{ common.timezone }}"
+
 - name: install packages
   apt:
     name:
