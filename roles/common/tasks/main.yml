@@ -1,7 +1,7 @@
 ---
 - name: check os version
-  fail: msg='OS is NOT Ubuntu18.x'
-  when: ansible_distribution != 'Ubuntu' or ansible_distribution_major_version != '18'
+  fail: msg='OS is NOT Ubuntu (>= 20.x)'
+  when: not (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version|int >= 20)
 
 - name: set timezone
   timezone:
@@ -10,9 +10,6 @@
 - name: install packages
   apt:
     name:
-      - python-pip
-      - python-dev
-      - python-setuptools
       - python3-pip
       - python3-dev
       - python3-setuptools
