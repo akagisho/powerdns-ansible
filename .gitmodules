@@ -1,0 +1,3 @@
+[submodule "submodules/docker"]
+	path = submodules/docker
+	url = git@github.com:akagisho/docker-ansible.git
