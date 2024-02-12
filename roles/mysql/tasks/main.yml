@@ -2,6 +2,7 @@
 - name: install packages
   apt:
     name:
+      - pkgconf
       - mysql-server
       - libmysqlclient-dev
     update_cache: yes

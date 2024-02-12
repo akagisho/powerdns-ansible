@@ -68,11 +68,10 @@
   with_fileglob:
     - ../templates/home/dnsops/PowerDNS-Admin/configs/*.j2
 
-- name: run docker-compose build
-  shell: docker-compose build
+- name: run docker compose build
+  shell: docker compose build
   args:
     chdir: /home/{{ opsuser }}/PowerDNS-Admin
-  become_user: "{{ opsuser }}"
   register: result
   changed_when: "'Running in' in result.stdout"
 

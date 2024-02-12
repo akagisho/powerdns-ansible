@@ -56,8 +56,15 @@
   shell: ssh-keygen -t rsa -N "" -f /home/{{ opsuser }}/.ssh/id_rsa
   args:
     creates: /home/{{ opsuser }}/.ssh/id_rsa
-  become: yes
-  become_user: "{{ opsuser }}"
+  when: "'master' in group_names"
+
+- name: fix ownership of key pair
+  file:
+    path: "{{ item }}"
+    owner: "{{ opsuser }}"
+  with_items:
+    - /home/{{ opsuser }}/.ssh/id_rsa
+    - /home/{{ opsuser }}/.ssh/id_rsa.pub
   when: "'master' in group_names"
 
 - name: fetch ssh key pair
