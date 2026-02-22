@@ -116,3 +116,9 @@
     name: master_zones.sh
     user: "{{ opsuser }}"
     job: "setlock -n /tmp/master_zones.lock /home/{{ opsuser }}/zone_sync/master_zones.sh"
+
+- name: add cron job
+  cron:
+    name: "cleanup sessions"
+    user: "{{ opsuser }}"
+    job: "/usr/bin/mysql powerdns_admin -e 'DELETE FROM sessions WHERE expiry <= NOW() - INTERVAL 1 DAY;'"

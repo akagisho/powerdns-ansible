@@ -38,6 +38,7 @@
   apt:
     name:
       - daemontools
+      - cron
     update_cache: yes
 
 - name: add user
