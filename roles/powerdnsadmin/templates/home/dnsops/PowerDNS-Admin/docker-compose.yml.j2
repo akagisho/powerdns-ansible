@@ -29,7 +29,7 @@ services:
       - /var/run/mysqld/mysqld.sock:/var/run/mysqld/mysqld.sock
     networks:
       - default
-    command: --api=yes --api-key=${PDNS_API_KEY} --webserver-address=0.0.0.0 --webserver-allow-from=0.0.0.0/0 --allow-axfr-ips={{ slaves | join(',') }}
+    command: --api=yes --api-key=${PDNS_API_KEY} --webserver-address=0.0.0.0 --webserver-allow-from=0.0.0.0/0 --allow-axfr-ips=${PDNS_ALLOW_AXFR_IPS}
     environment:
       - MYSQL_HOST=${PDNS_DB_HOST}
       - MYSQL_USER=${PDNS_DB_USER}
